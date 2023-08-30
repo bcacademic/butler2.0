@@ -3,7 +3,7 @@ LABEL maintainer = "Christoph Böhm FHTW"
 LABEL creator = "Georg Novotny FHTW"
 
 RUN apt update && \
-    apt-get install -y bash-completion\
+    apt-get install -y bash-completion nano\
     less htop tmux xterm gosu python3-pip git vim python3-pip\
     ros-noetic-amcl ros-noetic-angles ros-noetic-base-local-planner ros-noetic-clear-costmap-recovery ros-noetic-global-planner* \
     ros-noetic-costmap-2d ros-noetic-diagnostic-updater ros-noetic-hls-lfcd-lds-driver ros-noetic-interactive-markers \
@@ -13,7 +13,7 @@ RUN apt update && \
     ros-noetic-tf ros-noetic-tf2 ros-noetic-tf2-geometry-msgs ros-noetic-tf2-kdl ros-noetic-tf2-msgs ros-noetic-tf2-py \
     ros-noetic-tf2-ros ros-noetic-urdf ros-noetic-voxel-grid ros-noetic-xacro \
     ros-noetic-rosdoc-lite ros-noetic-gmapping ros-noetic-rqt* ros-noetic-gazebo-ros ros-noetic-gazebo-plugins* \
-    ros-noetic-pid --no-install-recommends\
+    ros-noetic-pid ros-noetic-urdf-tutorial ros-noetic-gazebo-ros-control ros-noetic-gazebo-ros-pkgs --no-install-recommends\
     && rm -rf /var/lib/apt/lists/
 RUN pip3 install jupyter 
 ENV USERNAME fhtw_user
@@ -34,11 +34,12 @@ RUN echo "export ROS_IP=\"\$(hostname -I | awk '{print \$1;}')\"" >> /home/$USER
 RUN echo 'echo "ROS_HOSTNAME=>$ROS_HOSTNAME<"' >> /home/$USERNAME/.bashrc
 RUN echo 'echo "ROS_IP=>$ROS_IP<"' >> /home/$USERNAME/.bashrc
 
-
 RUN mkdir -p /home/$USERNAME/catkin_ws/src &&\
     cd /home/$USERNAME/catkin_ws/src && \
-    /ros_entrypoint.sh catkin_init_workspace &&\
-    cd .. &&\
+    /ros_entrypoint.sh catkin_init_workspace
+# Copy package into container (TODO: should be on Gitlab)
+COPY ./package /home/$USERNAME/catkin_ws/src
+RUN cd /home/$USERNAME/catkin_ws &&\
     /ros_entrypoint.sh catkin_make
 RUN chown $USERNAME:$USERNAME --recursive /home/$USERNAME/catkin_ws
 RUN echo "source /opt/ros/noetic/setup.bash" >> /home/$USERNAME/.bashrc
@@ -88,6 +89,15 @@ RUN echo "MIR100 packages Installed"
 RUN apt update && \
     apt-get install -y ros-noetic-universal-robots
 RUN echo "UR5 packages Installed"
+
+# # Installing MOBIPICK package from https://github.com/DFKI-NI/mir_robot
+# # This includes MIR100 and UR5 packages
+# RUN cd /home/$USERNAME/catkin_ws/src && \
+#     git clone -b noetic https://github.com/DFKI-NI/mobipick.git &&\
+#     bash mobipick/install-deps.sh &&\
+#     cd .. &&\
+#     /ros_entrypoint.sh catkin_make
+# RUN echo "MOBIPICK packages Installed"
 
 COPY ./docker_install /home/$USERNAME/docker_install
 RUN bash /home/$USERNAME/docker_install/install_vim.sh "${USERNAME}"
